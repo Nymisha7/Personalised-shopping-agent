@@ -1070,7 +1070,7 @@ async function startSession() {
   showLoading(true);
   try {
     // Step 1: Reset environment — generates products, scores them
-    const data = await api('/reset', 'POST', { query });
+    const data = await api('/ui/reset', 'POST', { query });
     appState.products = data.products || [];
     appState.scoredProducts = data.scored_products || [];
     appState.personalityTraits = data.personality_traits || {};
