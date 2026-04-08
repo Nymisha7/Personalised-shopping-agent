@@ -1,0 +1,26 @@
+{
+  "price_sensitivity": 0.6,
+  "quality_preference": 0.8,
+  "risk_aversion": 0.75,
+  "research_depth": 0.9,
+  "brand_trust": 0.65,
+  "exploration_vs_repeat": 0.7,
+  "review_dependence": 0.85,
+  "return_preference": 0.8,
+  "decision_speed": 0.4,
+  "discount_sensitivity": 0.6,
+  "category_preferences": {
+    "electronics": {
+      "risk_aversion": 0.9,
+      "research_depth": 0.95
+    },
+    "clothing": {
+      "brand_trust": 0.4,
+      "exploration": 0.8
+    },
+    "home_appliances": {
+      "quality_preference": 0.9,
+      "brand_trust": 0.85
+    }
+  }
+}

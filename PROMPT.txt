@@ -1,0 +1,592 @@
+USING THIS https://github.com/meta-pytorch/OpenEnv/tree/main/tutorial
+
+
+Build a personalized shopping agent that learns to make purchase decisions the way the user would, not just maximize clicks or choose the cheapest item.
+
+The agent should model the user’s:
+
+shopping preferences
+
+comparison style
+
+risk tolerance
+
+value-for-money logic
+
+trust in brands/sellers
+
+tendency to explore vs repeat
+
+satisfaction and regret patterns
+
+The system should use:
+
+persistent memory to store stable preferences and past shopping episodes
+
+an interactive environment to simulate shopping decisions
+
+reinforcement learning to improve decision-making from feedback over time
+
+The goal is to create an agent that can:
+
+rank products the way the user likely would
+
+explain tradeoffs the user cares about
+
+adapt from real behavior
+
+gradually “shop like the user”
+
+Short research-style version
+Problem:
+Current shopping recommenders optimize generic objectives such as clicks, conversions, or popularity, but they do not capture an individual user’s actual decision process. The objective of this project is to design a memory-augmented reinforcement learning shopping agent that learns a user-specific shopping policy from preferences, interaction history, and feedback, so that it can make recommendations and decisions aligned with the user’s own shopping behavior.
+
+Core objective
+The agent should answer this:
+
+“Given multiple products, which one would this specific user most likely choose, and why?”
+
+Not just:
+
+“Which product is globally best?”
+
+Workflow
+1. Define the user shopping profile
+Create a persistent memory layer that represents how the user shops.
+
+Files / memory structure
+memory/
+  personality.md
+  preferences.json
+  projects.md
+  episodic_log.jsonl
+  semantic_memory.jsonl
+What each stores
+personality.md
+Natural-language description of shopping style
+
+preferences.json
+Structured traits like:
+
+price sensitivity
+
+quality preference
+
+risk aversion
+
+research depth
+
+brand trust
+
+episodic_log.jsonl
+Specific shopping events:
+
+clicked item
+
+compared items
+
+bought item
+
+removed from cart
+
+returned product
+
+semantic_memory.jsonl
+Stable learned conclusions:
+
+prefers value over cheapest
+
+cautious in electronics
+
+prefers refundable items
+
+2. Build the shopping environment
+Use an environment interface similar to OpenEnv.
+
+This environment should simulate a shopping session.
+
+State
+The state should include:
+
+current search/query
+
+category
+
+candidate products
+
+product features
+
+price/reviews/brand/seller info
+
+current memory profile
+
+recent session history
+
+Actions
+The agent can take actions like:
+
+view item
+
+compare items
+
+shortlist
+
+add to cart
+
+skip
+
+buy
+
+ask for more options
+
+choose safer/cheaper/premium alternative
+
+Observation
+The environment returns:
+
+updated product list or state
+
+user feedback proxy
+
+whether the action moved toward a likely purchase
+
+reward
+
+Reward
+Reward should reflect:
+
+alignment with user style
+
+satisfaction
+
+lower regret
+
+purchase confidence
+
+reduced returns
+
+good tradeoff quality
+
+3. Use the web interface for testing first
+Before RL, use the OpenEnv-style interface to manually test the environment.
+
+This step is for:
+
+checking whether reset() works
+
+checking whether step() updates correctly
+
+verifying reward logic
+
+making sure state transitions make sense
+
+So yes, the interface is mainly the manual testing/debugging layer before training.
+
+4. Bootstrap the agent with predicted priors
+At the beginning, the agent does not know the user fully.
+
+So initialize it with predicted priors such as:
+
+comparison-heavy
+
+explanation-seeking
+
+quality-aware
+
+cautious in high-stakes categories
+
+dislikes shallow recommendations
+
+These are just starting assumptions, not fixed truth.
+
+5. Collect interaction data
+As the user shops, log all events.
+
+Examples:
+
+searched for “wireless earbuds”
+
+clicked mid-priced, highly rated option
+
+ignored suspicious cheap listing
+
+compared 4 items before adding one to cart
+
+bought item
+
+returned item later
+
+This becomes the raw experience stream.
+
+6. Update memory
+Split learning into two layers:
+
+Episodic memory
+Raw event history.
+
+Example:
+
+“On April 7, user compared 5 earbuds before selecting one with better reviews.”
+
+Semantic memory
+Stable conclusions inferred from repeated behavior.
+
+Example:
+
+“User tends to trust ratings over brand in low-cost categories.”
+
+“User becomes highly research-heavy in electronics.”
+
+This separation is important:
+
+episodic = what happened
+
+semantic = what seems generally true
+
+7. Train the RL policy
+Now train the shopping agent to act based on:
+
+current shopping context
+
+candidate products
+
+personality/preferences
+
+retrieved semantic memory
+
+recent episodic memory
+
+Policy learns to choose:
+compare more
+
+recommend safest
+
+recommend best value
+
+hold off purchase
+
+choose premium
+
+choose familiar brand
+
+shortlist several options
+
+The policy should optimize for user-aligned decisions, not generic e-commerce metrics only.
+
+8. Keep personality updates constrained
+Do not let the system rewrite stable traits too fast.
+
+Use:
+
+confidence scores
+
+repeated evidence thresholds
+
+decay for old weak signals
+
+bounds on trait values
+
+Example:
+A single cheap purchase should not suddenly make the agent conclude:
+
+“user is always price-first”
+
+IF I ask agent to shop for some items based on the users personality, the agent must give the items, based on that, it  must be trained in the rl environment
+
+9. Evaluate the system
+Measure success using:
+
+recommendation alignment
+
+user satisfaction
+
+lower regret
+
+fewer irrelevant suggestions
+
+purchase confidence
+
+lower return rate
+
+better ranking accuracy against user choices
+
+You can also compare:
+
+generic recommender
+
+memory-only agent
+
+RL-only agent
+
+memory + RL agent
+
+End-to-end workflow
+1. Define shopping memory schema
+2. Build environment (state, action, reward)
+3. Test environment manually in OpenEnv web UI
+4. Initialize with predicted user priors
+5. Collect shopping interaction logs
+6. Store episodic memory
+7. Derive semantic memory from repeated patterns
+8. Train RL policy on memory-conditioned state
+9. Update preferences carefully over time
+10. Deploy agent to recommend/shop like the user
+Simple system architecture
+User behavior
+   ↓
+Event logger
+   ↓
+episodic_log.jsonl
+   ↓
+memory summarizer
+   ↓
+semantic_memory.jsonl + preferences.json
+   ↓
+shopping environment
+   ↓
+RL agent
+   ↓
+rank / compare / buy / skip actions
+   ↓
+reward + feedback
+   ↓
+policy update
+
+-------------------------------------------------------------------------------------------------
+
+Must simulate a real-world task (not games or toys)
+Implement full OpenEnv spec: typed models, step()/reset()/state(), openenv.yaml
+Minimum 3 tasks with agent graders (easy → medium → hard, scores/reward 0.0–1.0)
+Meaningful reward function with partial progress signals
+Baseline inference script with reproducible scores
+Deploy to Hugging Face Spaces + working Dockerfile
+README with environment description, action/observation spaces, setup instructions
+
+------------------------------------------------------------------------------------------------------
+
+Real-world task simulation
+The environment must simulate a task humans actually do. Not games, not toys. Examples: email triage, code review, data cleaning, scheduling, customer support, content moderation.
+OpenEnv spec compliance
+Implement the full OpenEnv interface: typed Observation, Action, and Reward Pydantic models. step(action) → returns observation, reward, done, info. reset() → returns initial observation. state() → returns current state. openenv.yaml with metadata. Tested via openenv validate.
+Minimum 3 tasks with agent graders
+Each task defines a concrete objective an agent must accomplish, with a programmatic grader that scores performance (0.0–1.0). Tasks should range: easy → medium → hard. Graders must have clear, deterministic success/failure criteria.
+Meaningful reward function
+Provides signal over the full trajectory (not just binary end-of-episode). Rewards partial progress toward task completion. Penalizes clearly undesirable behavior (e.g. infinite loops, destructive actions).
+Baseline inference script
+Uses the OpenAI API client to run a model against the environment. Reads API credentials from environment variables (OPENAI_API_KEY). Produces a reproducible baseline score on all 3 tasks.
+
+use any open source LLM not open ai
+------------------------------------------------------------------------------------------------
+
+Real-world utility (30%)
+•  0–5: Toy/artificial problem with no practical application
+•  6–15: Valid domain but shallow modeling of the real task
+•  16–25: Good domain modeling, would be useful for agent evaluation
+•  26–30: Excellent — fills a real gap, immediate value for the RL/agent community
+Task & grader quality (25%)
+•  3+ tasks with difficulty range?
+•  Graders produce scores between 0.0–1.0?
+•  Graders deterministic and reproducible?
+•  Hard task genuinely challenges frontier models?
+Environment design (20%)
+•  reset() produces clean state?
+•  Action/observation types well-designed and documented?
+•  Reward function provides useful varying signal (not just sparse)?
+•  Episode boundaries sensible?
+Code quality & spec compliance (15%)
+•  openenv validate passes?
+•  docker build && docker run works?
+•  HF Space deploys and responds?
+•  Baseline script runs and reproduces scores?
+Creativity & novelty (10%)
+•  Domain we haven’t seen in OpenEnv before?
+•  Reward design has interesting properties?
+•  Clever mechanics that make the environment engaging?
+
+
+so think carefully and achieve the best score
+
+------------------------------------------------------------------------------
+
+HF Space deploys
+Automated ping to the Space URL — must return 200 and respond to reset()
+OpenEnv spec compliance
+Validate openenv.yaml, typed models, step()/reset()/state() endpoints
+Dockerfile builds
+Automated docker build on the submitted repo
+Baseline reproduces
+Run the submitted inference script — must complete without error and produce scores
+3+ tasks with graders
+Enumerate tasks, run each grader, verify scores/reward in 0.0–1.0 range
+Mandatory Additional Instructions
+Before submitting, ensure the following variables are defined in your environment configuration:
+API_BASE_URL   The API endpoint for the LLM.
+MODEL_NAME     The model identifier to use for inference.
+HF_TOKEN       Your Hugging Face / API key.
+The inference script must be named `inference.py` and placed in the root directory of the project
+Participants must use OpenAI Client for all LLM calls using above variables
+Participants must emit structured stdout logs strictly following the [START], [STEP], and [END] format defined in the sample inference.py provided below. Any deviation in field names, ordering, or formatting will result in incorrect evaluation scoring. Refer to the Sample Inference Script for the complete format specification and examples.
+Infra Restrictions
+Runtime of inference script should be less than 20min 
+Make sure your env and inference can run on a machine with vcpu=2, memory=8gb
+Validator
+Run the pre-submission validation script before submitting
+
+
+----------------------------------------------------------------------------------------------
+
+Sample Inference script
+
+
+"""
+Inference Script Example
+===================================
+MANDATORY
+- Before submitting, ensure the following variables are defined in your environment configuration:
+    API_BASE_URL   The API endpoint for the LLM.
+    MODEL_NAME     The model identifier to use for inference.
+    HF_TOKEN       Your Hugging Face / API key.
+    LOCAL_IMAGE_NAME The name of the local image to use for the environment if you are using from_docker_image()
+                     method
+- Defaults are set only for API_BASE_URL and MODEL_NAME 
+    (and should reflect your active inference setup):
+    API_BASE_URL = os.getenv("API_BASE_URL", "<your-active-endpoint>")
+    MODEL_NAME = os.getenv("MODEL_NAME", "<your-active-model>")
+    
+- The inference script must be named `inference.py` and placed in the root directory of the project
+- Participants must use OpenAI Client for all LLM calls using above variables
+STDOUT FORMAT
+- The script must emit exactly three line types to stdout, in this order:
+    [START] task=<task_name> env=<benchmark> model=<model_name>
+    [STEP]  step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
+    [END]   success=<true|false> steps=<n> score=<score> rewards=<r1,r2,...,rn>
+  Rules:
+    - One [START] line at episode begin.
+    - One [STEP] line per step, immediately after env.step() returns.
+    - One [END] line after env.close(), always emitted (even on exception).
+    - reward and rewards are formatted to 2 decimal places.
+    - done and success are lowercase booleans: true or false.
+    - error is the raw last_action_error string, or null if none.
+    - All fields on a single line with no newlines within a line.
+    - Each tasks should return score in [0, 1]
+  Example:
+    [START] task=click-test env=miniwob model=Qwen3-VL-30B
+    [STEP] step=1 action=click('123') reward=0.00 done=false error=null
+    [STEP] step=2 action=fill('456','text') reward=0.00 done=false error=null
+    [STEP] step=3 action=click('789') reward=1.00 done=true error=null
+    [END] success=true steps=3 score=1.00 rewards=0.00,0.00,1.00
+"""
+import asyncio
+import os
+import textwrap
+from typing import List, Optional
+from openai import OpenAI
+from my_env_v4 import MyEnvV4Action, MyEnvV4Env
+IMAGE_NAME = os.getenv("IMAGE_NAME") # If you are using docker image 
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+TASK_NAME = os.getenv("MY_ENV_V4_TASK", "echo")
+BENCHMARK = os.getenv("MY_ENV_V4_BENCHMARK", "my_env_v4")
+MAX_STEPS = 8
+TEMPERATURE = 0.7
+MAX_TOKENS = 150
+SUCCESS_SCORE_THRESHOLD = 0.1  # normalized score in [0, 1]
+# Max possible reward: each token contributes 0.1, across all steps
+_MAX_REWARD_PER_STEP = MAX_TOKENS * 0.1
+MAX_TOTAL_REWARD = MAX_STEPS * _MAX_REWARD_PER_STEP
+SYSTEM_PROMPT = textwrap.dedent(
+    """
+    You are interacting with a simple echo environment.
+    Each turn you must send a message. The environment will echo it back.
+    Reward is proportional to message length: reward = len(message) * 0.1
+    Your goal is to maximize total reward by sending meaningful, substantive messages.
+    Reply with exactly one message string — no quotes, no prefixes, just the message text.
+    """
+).strip()
+def log_start(task: str, env: str, model: str) -> None:
+    print(f"[START] task={task} env={env} model={model}", flush=True)
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    error_val = error if error else "null"
+    done_val = str(done).lower()
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        flush=True,
+    )
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+def build_user_prompt(step: int, last_echoed: str, last_reward: float, history: List[str]) -> str:
+    history_block = "\n".join(history[-4:]) if history else "None"
+    return textwrap.dedent(
+        f"""
+        Step: {step}
+        Last echoed message: {last_echoed!r}
+        Last reward: {last_reward:.2f}
+        Previous steps:
+        {history_block}
+        Send your next message.
+        """
+    ).strip()
+def get_model_message(client: OpenAI, step: int, last_echoed: str, last_reward: float, history: List[str]) -> str:
+    user_prompt = build_user_prompt(step, last_echoed, last_reward, history)
+    try:
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
+            stream=False,
+        )
+        text = (completion.choices[0].message.content or "").strip()
+        return text if text else "hello"
+    except Exception as exc:
+        print(f"[DEBUG] Model request failed: {exc}", flush=True)
+        return "hello"
+async def main() -> None:
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    env = await MyEnvV4Env.from_docker_image(IMAGE_NAME)
+    history: List[str] = []
+    rewards: List[float] = []
+    steps_taken = 0
+    score = 0.0
+    success = False
+    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+    try:
+        result = await env.reset() # OpenENV.reset()
+        last_echoed = result.observation.echoed_message
+        last_reward = 0.0
+        for step in range(1, MAX_STEPS + 1):
+            if result.done:
+                break
+            message = get_model_message(client, step, last_echoed, last_reward, history)
+            result = await env.step(MyEnvV4Action(message=message))
+            obs = result.observation
+            reward = result.reward or 0.0
+            done = result.done
+            error = None
+            rewards.append(reward)
+            steps_taken = step
+            last_echoed = obs.echoed_message
+            last_reward = reward
+            log_step(step=step, action=message, reward=reward, done=done, error=error)
+            history.append(f"Step {step}: {message!r} -> reward {reward:+.2f}")
+            if done:
+                break
+        score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
+        score = min(max(score, 0.0), 1.0)  # clamp to [0, 1]
+        success = score >= SUCCESS_SCORE_THRESHOLD
+    finally:
+        try:
+            await env.close()
+        except Exception as e:
+            print(f"[DEBUG] env.close() error (container cleanup): {e}", flush=True)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+---------------------------------------------------------------------------------

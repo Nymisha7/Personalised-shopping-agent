@@ -1,0 +1,31 @@
+{"timestamp": "2026-04-07T10:00:00", "event": "search", "query": "wireless earbuds"}
+{"timestamp": "2026-04-07T10:01:10", "event": "view", "product_id": "p123", "price": 2999, "rating": 4.2, "brand": "Boat"}
+{"timestamp": "2026-04-07T10:02:30", "event": "view", "product_id": "p124", "price": 1999, "rating": 3.8, "brand": "Unknown"}
+{"timestamp": "2026-04-07T10:03:00", "event": "compare", "products": ["p123", "p125", "p126"]}
+{"timestamp": "2026-04-07T10:05:00", "event": "shortlist", "product_id": "p125"}
+{"timestamp": "2026-04-07T10:06:30", "event": "view_reviews", "product_id": "p125"}
+{"timestamp": "2026-04-07T10:08:00", "event": "add_to_cart", "product_id": "p125"}
+{"timestamp": "2026-04-07T10:10:00", "event": "purchase", "product_id": "p125", "price": 3499}
+{"timestamp": "2026-04-10T12:00:00", "event": "return", "product_id": "p124", "reason": "poor quality"}
+{"timestamp": "2026-04-08T19:16:56.412409", "event": "agent_purchase", "query": "lip balm", "purchased": [{"id": "p3", "name": "Mid-Range Lip Balm", "price": 11.65, "brand": "Neutrogena"}], "reward": 0.6173, "steps": 4, "viewed_count": 2, "compared_count": 1, "shortlisted_count": 0}
+{"timestamp": "2026-04-08T19:18:40.201568", "event": "user_feedback", "query": "lip balm", "product_id": "p3", "approved": true, "comment": "Great pick!"}
+{"timestamp": "2026-04-08T19:45:28.596427", "event": "agent_purchase", "query": "lip balm", "purchased": [{"id": "p8", "name": "Lip Balm (Was $22.52, Now Sale!)", "price": 12.51, "brand": "Neutrogena"}, {"id": "p7", "name": "Trending Lip Balm", "price": 16.88, "brand": "Vaseline"}], "reward": 0.51, "steps": 2, "viewed_count": 0, "compared_count": 0, "shortlisted_count": 0}
+{"timestamp": "2026-04-08T20:16:20.175064", "event": "agent_attempt", "query": "lip balm", "attempt_number": 1, "product_id": "p4", "product_name": "Premium Lip Balm", "personality_score": 0.8635, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:16:20.176711", "event": "user_feedback", "query": "lip balm", "product_id": "p4", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:16:53.461773", "event": "agent_attempt", "query": "lip balm", "attempt_number": 2, "product_id": "p5", "product_name": "Luxury Lip Balm", "personality_score": 0.8068, "approved": true, "reward": 0.7, "comment": "User confirms this is correct"}
+{"timestamp": "2026-04-08T20:16:53.464633", "event": "user_feedback", "query": "lip balm", "product_id": "p5", "approved": true, "comment": "User confirms this is correct"}
+{"timestamp": "2026-04-08T20:19:11.338681", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 1, "product_id": "p4", "product_name": "Premium I Want To Buy A Lipbalm", "personality_score": 0.8523, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:11.340214", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p4", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:32.086101", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 2, "product_id": "p8", "product_name": "I Want To Buy A Lipbalm (Was $124.83, Now Sale!)", "personality_score": 0.8126, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:32.086101", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p8", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:42.039847", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 3, "product_id": "p5", "product_name": "Luxury I Want To Buy A Lipbalm", "personality_score": 0.8028, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:42.041417", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p5", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:52.469782", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 4, "product_id": "p3", "product_name": "Mid-Range I Want To Buy A Lipbalm", "personality_score": 0.8003, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:52.470984", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p3", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:59.745860", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 5, "product_id": "p6", "product_name": "Popular I Want To Buy A Lipbalm", "personality_score": 0.7653, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:19:59.745860", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p6", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:20:11.654411", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 6, "product_id": "p7", "product_name": "Trending I Want To Buy A Lipbalm", "personality_score": 0.7228, "approved": false, "reward": -0.3, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:20:11.657871", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p7", "approved": false, "comment": "User says wrong choice"}
+{"timestamp": "2026-04-08T20:20:44.249164", "event": "agent_attempt", "query": "i want to buy a lipbalm", "attempt_number": 7, "product_id": "p2", "product_name": "Budget I Want To Buy A Lipbalm", "personality_score": 0.7152, "approved": true, "reward": 0.2, "comment": "User confirms this is correct"}
+{"timestamp": "2026-04-08T20:20:44.250757", "event": "user_feedback", "query": "i want to buy a lipbalm", "product_id": "p2", "approved": true, "comment": "User confirms this is correct"}
+{"timestamp": "2026-04-08T21:17:27.524638", "event": "agent_purchase", "query": "lip balm", "purchased": [{"id": "p1", "name": "Ultra-Cheap Lip Balm", "price": 1.9, "brand": "BeautyDeals"}], "reward": 0.2465, "steps": 3, "viewed_count": 2, "compared_count": 1, "shortlisted_count": 0}

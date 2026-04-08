@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personality Shopping Agent — RL Environment</title>
+  <meta name="description" content="AI agent learns your shopping personality through reinforcement learning. Just type what you want — the agent picks for you automatically.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #06080f;
+      --bg-secondary: #0d1117;
+      --bg-card: rgba(13, 17, 23, 0.85);
+      --bg-glass: rgba(255, 255, 255, 0.03);
+      --bg-glass-hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.06);
+      --border-active: rgba(99, 102, 241, 0.5);
+      --text-primary: #e4e8f1;
+      --text-secondary: #8b93a7;
+      --text-muted: #525b6e;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.1);
+      --green-border: rgba(34, 197, 94, 0.25);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.1);
+      --red-border: rgba(239, 68, 68, 0.25);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.1);
+      --blue: #3b82f6;
+      --blue-bg: rgba(59, 130, 246, 0.1);
+      --pink: #ec4899;
+      --pink-bg: rgba(236, 72, 153, 0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background */
+    .ambient-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .ambient-bg .orb {
+      position: absolute; border-radius: 50%; filter: blur(140px); opacity: 0.5;
+    }
+    .ambient-bg .orb-1 {
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%);
+      top: -250px; left: -200px;
+      animation: float-orb 20s ease-in-out infinite;
+    }
+    .ambient-bg .orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(139,92,246,0.08), transparent 70%);
+      bottom: -200px; right: -150px;
+      animation: float-orb 25s ease-in-out infinite reverse;
+    }
+    .ambient-bg .orb-3 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(236,72,153,0.06), transparent 70%);
+      top: 40%; left: 50%;
+      animation: float-orb 18s ease-in-out infinite 5s;
+    }
+
+    @keyframes float-orb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -20px) scale(1.05); }
+      66% { transform: translate(-20px, 15px) scale(0.95); }
+    }
+
+    /* ---- HEADER ---- */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6, 8, 15, 0.8);
+      backdrop-filter: blur(24px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-logo {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 30px rgba(99,102,241,0.25);
+      animation: logo-glow 3s ease-in-out infinite;
+    }
+    @keyframes logo-glow {
+      0%, 100% { box-shadow: 0 0 30px rgba(99,102,241,0.25); }
+      50% { box-shadow: 0 0 50px rgba(99,102,241,0.4); }
+    }
+    .header-title { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.3px; }
+
+    .header-metrics { display: flex; gap: 10px; align-items: center; }
+    .metric {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px; font-weight: 600;
+    }
+    .metric .label { color: var(--text-muted); }
+    .metric .val { color: var(--text-primary); }
+    .metric.episode .val { color: var(--accent-light); }
+    .metric.reward .val { color: var(--green); }
+    .metric.success .val { color: var(--amber); }
+
+    /* ---- MAIN CONTAINER ---- */
+    .container {
+      position: relative; z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 28px 60px;
+    }
+
+    /* ---- HERO PROMPT SECTION ---- */
+    .hero-section {
+      text-align: center;
+      padding: 48px 20px 36px;
+    }
+    .hero-title {
+      font-size: 36px; font-weight: 900;
+      letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #e4e8f1 0%, #818cf8 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      line-height: 1.15;
+    }
+    .hero-desc {
+      font-size: 15px; color: var(--text-secondary);
+      max-width: 640px; margin: 0 auto 28px;
+      line-height: 1.6;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 100px;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.2);
+      color: var(--green);
+      font-size: 12px; font-weight: 700;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    /* ---- PROMPT INPUT ---- */
+    .prompt-bar {
+      display: flex; gap: 0;
+      max-width: 600px; margin: 0 auto 20px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px var(--border), 0 8px 40px rgba(0,0,0,0.4);
+      transition: box-shadow var(--transition);
+    }
+    .prompt-bar:focus-within {
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 50px rgba(99,102,241,0.2);
+    }
+    .prompt-bar input {
+      flex: 1; padding: 16px 22px;
+      background: var(--bg-secondary);
+      border: none;
+      color: var(--text-primary);
+      font-family: inherit; font-size: 16px; font-weight: 500;
+      outline: none;
+    }
+    .prompt-bar input::placeholder { color: var(--text-muted); }
+    .prompt-bar button {
+      padding: 16px 28px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      color: white;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .prompt-bar button:hover {
+      background: linear-gradient(135deg, #7c7ff7, #9b7cf9);
+    }
+    .prompt-bar button:disabled {
+      opacity: 0.4; cursor: not-allowed;
+    }
+
+    /* Category pills */
+    .category-pills {
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .pill {
+      padding: 7px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: var(--transition);
+    }
+    .pill:hover { background: var(--bg-glass-hover); color: var(--text-secondary); border-color: rgba(255,255,255,0.1); }
+    .pill.active {
+      background: rgba(99,102,241,0.12);
+      color: var(--accent-light); border-color: rgba(99,102,241,0.3);
+    }
+
+    /* ---- RL FLOW AREA ---- */
+    .flow-area {
+      display: none;
+      margin-top: 12px;
+    }
+    .flow-area.active { display: block; }
+
+    /* ---- AGENT THINKING ANIMATION ---- */
+    .thinking-section {
+      text-align: center;
+      padding: 60px 20px;
+      display: none;
+    }
+    .thinking-section.active { display: block; }
+    .thinking-brain {
+      font-size: 56px;
+      animation: think-bounce 1.5s ease-in-out infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes think-bounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-12px) scale(1.1); }
+    }
+    .thinking-text {
+      font-size: 16px; font-weight: 600; color: var(--text-secondary);
+      animation: think-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes think-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .thinking-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4) infinite;
+    }
+    @keyframes dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+
+    /* ---- ATTEMPT CARD (replayed one at a time) ---- */
+    .attempt-section {
+      display: none;
+      max-width: 750px; margin: 0 auto;
+    }
+    .attempt-section.active { display: block; }
+
+    .attempt-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 12px; font-weight: 700;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .attempt-badge.exploring { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+    .attempt-badge.exploiting { background: rgba(99,102,241,0.1); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.25); }
+    .attempt-badge.success-badge { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+    .attempt-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+      animation: pick-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pick-enter {
+      0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .attempt-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .attempt-card.success-card::before {
+      background: linear-gradient(90deg, #22c55e, #4ade80, #86efac);
+    }
+    .attempt-card.fail-card::before {
+      background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+    }
+    .attempt-card.learning-card::before {
+      background: linear-gradient(90deg, #f59e0b, #fb923c, #f97316);
+    }
+
+    .attempt-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 20px; gap: 16px;
+    }
+    .attempt-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--accent-light);
+      margin-bottom: 6px;
+    }
+    .attempt-product-name {
+      font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .attempt-score-badge {
+      flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+      border-radius: 16px;
+      padding: 12px 16px;
+      min-width: 80px;
+    }
+    .attempt-score-badge.good {
+      background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05));
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+    .attempt-score-badge.mid {
+      background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(236,72,153,0.1));
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+    .attempt-score-badge.bad {
+      background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+    .attempt-score-value {
+      font-size: 28px; font-weight: 900;
+    }
+    .attempt-score-value.good {
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .attempt-score-value.mid {
+      background: linear-gradient(135deg, #818cf8, #ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .attempt-score-value.bad {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .attempt-score-label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .attempt-meta {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .attempt-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 100px;
+      font-size: 13px; font-weight: 600;
+    }
+    .tag-price { background: rgba(99,102,241,0.1); color: #a5b4fc; }
+    .tag-rating { background: var(--amber-bg); color: var(--amber); }
+    .tag-reviews { background: var(--bg-glass); color: var(--text-secondary); border: 1px solid var(--border); }
+    .tag-brand { background: var(--blue-bg); color: var(--blue); }
+    .tag-refund { background: var(--green-bg); color: var(--green); }
+    .tag-norefund { background: var(--red-bg); color: var(--red); }
+    .tag-seller { background: var(--bg-glass); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .attempt-features {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 24px;
+    }
+    .feature-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      font-size: 11px; color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .attempt-reasoning {
+      background: linear-gradient(135deg, rgba(99,102,241,0.05), rgba(139,92,246,0.05));
+      border: 1px solid rgba(99,102,241,0.12);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    .reasoning-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--accent-light);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .reasoning-text {
+      font-size: 14px; line-height: 1.7;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    /* Reward indicator on the card */
+    .attempt-reward-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+    .attempt-reward-row.positive {
+      background: rgba(34,197,94,0.06);
+      border: 1px solid rgba(34,197,94,0.15);
+    }
+    .attempt-reward-row.negative {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.15);
+    }
+    .reward-label-text {
+      font-size: 13px; font-weight: 600;
+    }
+    .reward-label-text.positive { color: var(--green); }
+    .reward-label-text.negative { color: var(--red); }
+    .reward-number {
+      font-size: 24px; font-weight: 900;
+    }
+    .reward-number.positive { color: var(--green); }
+    .reward-number.negative { color: var(--red); }
+
+    /* Status text below card */
+    .attempt-status {
+      text-align: center; margin-top: 18px;
+      font-size: 14px; font-weight: 600;
+    }
+    .attempt-status.learning { color: var(--amber); }
+    .attempt-status.done { color: var(--green); }
+
+    /* ---- RESULT CARD ---- */
+    .result-section {
+      display: none;
+      max-width: 750px; margin: 0 auto;
+    }
+    .result-section.active { display: block; }
+
+    .result-card {
+      text-align: center;
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 48px 36px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+      animation: pick-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .result-emoji { font-size: 64px; margin-bottom: 16px; }
+    .result-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .result-message {
+      font-size: 15px; color: var(--text-secondary);
+      line-height: 1.6; margin-bottom: 16px;
+    }
+    .result-reward {
+      font-size: 48px; font-weight: 900;
+      margin: 16px 0;
+    }
+    .result-reward.positive {
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .result-reward.negative {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .result-ideal {
+      margin: 16px 0 24px;
+      padding: 14px 20px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .result-ideal strong { color: var(--text-primary); }
+
+    .result-actions {
+      display: flex; gap: 12px; justify-content: center;
+      margin-top: 24px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-glass);
+      color: var(--text-secondary);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: var(--transition);
+    }
+    .btn:hover {
+      background: var(--bg-glass-hover);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none; color: white;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 30px rgba(99,102,241,0.5);
+      background: linear-gradient(135deg, #7c7ff7, #9b7cf9);
+    }
+    .btn-danger {
+      background: rgba(239,68,68,0.08);
+      border-color: rgba(239,68,68,0.2);
+      color: var(--red);
+    }
+    .btn-danger:hover {
+      background: rgba(239,68,68,0.15);
+    }
+
+    /* ---- ATTEMPT TIMELINE ---- */
+    .timeline-section {
+      max-width: 750px; margin: 32px auto 0;
+      display: none;
+    }
+    .timeline-section.active { display: block; }
+
+    .timeline-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .timeline-title .count {
+      background: var(--accent);
+      color: white; font-size: 10px; font-weight: 800;
+      padding: 2px 8px; border-radius: 100px;
+    }
+
+    .timeline { display: flex; flex-direction: column; gap: 10px; }
+    .timeline-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 14px 18px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      animation: slideUp 0.4s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .timeline-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px;
+    }
+    .timeline-num.success { background: var(--green-bg); color: var(--green); }
+    .timeline-num.fail { background: var(--red-bg); color: var(--red); }
+    .timeline-num.pending { background: rgba(99,102,241,0.1); color: var(--accent-light); }
+    .timeline-body { flex: 1; }
+    .timeline-product { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .timeline-detail { font-size: 12px; color: var(--text-muted); }
+    .timeline-strategy { font-size: 11px; margin-top: 2px; }
+    .timeline-strategy.explore { color: var(--amber); }
+    .timeline-strategy.exploit { color: var(--accent-light); }
+    .timeline-reward { font-weight: 700; font-size: 13px; }
+    .timeline-reward.positive { color: var(--green); }
+    .timeline-reward.negative { color: var(--red); }
+
+    /* ---- PRODUCTS GRID ---- */
+    .products-overview {
+      max-width: 750px; margin: 32px auto 0;
+      display: none;
+    }
+    .products-overview.active { display: block; }
+
+    .products-toggle {
+      width: 100%;
+      padding: 12px 18px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .products-toggle:hover { background: var(--bg-glass-hover); }
+    .products-toggle .arrow {
+      transition: transform 0.3s ease;
+    }
+    .products-toggle.open .arrow { transform: rotate(180deg); }
+
+    .products-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .products-grid.open {
+      display: grid;
+    }
+
+    .mini-product {
+      padding: 14px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+    .mini-product.highlighted {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green), 0 0 20px rgba(34,197,94,0.15);
+    }
+    .mini-product.tried {
+      border-color: rgba(239,68,68,0.3);
+      opacity: 0.5;
+    }
+    .mini-product.ideal {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 0 20px var(--accent-glow);
+    }
+    .mini-product .mp-name {
+      font-size: 13px; font-weight: 700;
+      margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mini-product .mp-meta {
+      font-size: 11px; color: var(--text-muted);
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .mini-product .mp-score {
+      font-size: 11px; font-weight: 700; color: var(--pink);
+      margin-top: 4px;
+    }
+    .mini-product .mp-tag {
+      font-size: 10px; font-weight: 600;
+      margin-top: 3px;
+    }
+
+    /* ---- CUMULATIVE REWARD BAR ---- */
+    .reward-summary {
+      max-width: 750px; margin: 24px auto 0;
+      display: none;
+    }
+    .reward-summary.active { display: block; }
+    .reward-bar-container {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+    }
+    .reward-bar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .reward-bar-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .reward-bar-value {
+      font-size: 20px; font-weight: 900;
+      background: linear-gradient(135deg, #818cf8, #22c55e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .reward-track {
+      height: 8px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .reward-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #22c55e);
+      border-radius: 100px;
+      transition: width 0.5s ease;
+    }
+
+    /* ---- PERSONALITY SIDEBAR ---- */
+    .personality-float {
+      position: fixed; top: 80px; right: 20px;
+      width: 280px;
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      z-index: 50;
+      display: none;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+    .personality-float.active { display: block; }
+    .personality-float::-webkit-scrollbar { width: 4px; }
+    .personality-float::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .pf-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pf-close {
+      margin-left: auto;
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer;
+      font-size: 16px; padding: 2px 6px;
+      transition: var(--transition);
+    }
+    .pf-close:hover { color: var(--text-primary); }
+
+    .trait-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px;
+    }
+    .trait-label {
+      font-size: 10px; color: var(--text-secondary);
+      font-weight: 600; width: 100px; flex-shrink: 0;
+    }
+    .trait-bar {
+      flex: 1; height: 5px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 100px; overflow: hidden;
+    }
+    .trait-fill {
+      height: 100%; border-radius: 100px;
+      transition: width 0.6s ease;
+    }
+    .trait-val {
+      font-size: 10px; font-weight: 800;
+      width: 32px; text-align: right;
+    }
+
+    .profile-toggle-btn {
+      position: fixed; top: 80px; right: 20px;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer; z-index: 49;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .profile-toggle-btn:hover {
+      background: var(--bg-glass-hover);
+      color: var(--text-primary);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ---- LOADING OVERLAY ---- */
+    .loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; pointer-events: none;
+      transition: var(--transition);
+    }
+    .loading-overlay.active { opacity: 1; pointer-events: all; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- TOAST ---- */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      z-index: 2000;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      padding: 14px 22px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      font-size: 13px; font-weight: 500;
+      animation: toastIn 0.3s ease;
+      max-width: 380px;
+    }
+    .toast.success { border-color: var(--green-border); color: var(--green); }
+    .toast.error { border-color: var(--red-border); color: var(--red); }
+    .toast.info { border-color: rgba(99,102,241,0.3); color: var(--accent-light); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; }
+      .container { padding: 20px 16px 40px; }
+      .hero-title { font-size: 26px; }
+      .hero-section { padding: 30px 10px 24px; }
+      .prompt-bar { border-radius: var(--radius-sm); }
+      .prompt-bar input { padding: 14px 16px; font-size: 15px; }
+      .prompt-bar button { padding: 14px 20px; font-size: 14px; }
+      .attempt-card { padding: 24px; }
+      .attempt-product-name { font-size: 20px; }
+      .personality-float { display: none !important; }
+      .profile-toggle-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="ambient-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="header-logo">🧠</div>
+    <div>
+      <div class="header-title">Personality Shopping Agent</div>
+      <div class="header-subtitle">AUTONOMOUS RL • SELF-LEARNING</div>
+    </div>
+  </div>
+  <div class="header-metrics">
+    <div class="metric episode">
+      <span class="label">Episodes</span>
+      <span class="val" id="m-episodes">0</span>
+    </div>
+    <div class="metric success">
+      <span class="label">Success</span>
+      <span class="val" id="m-success">0%</span>
+    </div>
+    <div class="metric reward">
+      <span class="label">Reward</span>
+      <span class="val" id="m-reward">0.00</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="container">
+
+  <!-- Hero / Prompt -->
+  <section class="hero-section" id="hero-section">
+    <div class="hero-badge">🤖 Fully Autonomous — No Training Needed</div>
+    <h1 class="hero-title">What do you want to buy?</h1>
+    <p class="hero-desc">
+      Type a product — the AI agent will read your personality from memory and <strong>automatically pick, score, learn, and improve</strong> on its own.
+      No clicking "buy" or "don't buy". Just watch it learn.
+    </p>
+
+    <div class="category-pills" id="category-pills">
+      <button class="pill active" data-cat="lip balm">💄 Lip Balm</button>
+      <button class="pill" data-cat="earbuds">🎧 Earbuds</button>
+      <button class="pill" data-cat="backpack">🎒 Backpack</button>
+      <button class="pill" data-cat="mixer grinder">🍳 Mixer Grinder</button>
+      <button class="pill" data-cat="headphones">🎵 Headphones</button>
+      <button class="pill" data-cat="water bottle">🫗 Water Bottle</button>
+    </div>
+
+    <div class="prompt-bar" id="prompt-bar">
+      <input type="text" id="prompt-input" placeholder="e.g., wireless earbuds, lip balm, laptop backpack..." value="lip balm" autocomplete="off">
+      <button id="btn-start">🚀 Start Agent</button>
+    </div>
+  </section>
+
+  <!-- RL Flow Area -->
+  <div class="flow-area" id="flow-area">
+
+    <!-- Agent Thinking -->
+    <div class="thinking-section" id="thinking-section">
+      <div class="thinking-brain">🧠</div>
+      <div class="thinking-text">Agent is running autonomous RL episode<span class="thinking-dots"></span></div>
+    </div>
+
+    <!-- Current attempt display (animated step-through) -->
+    <div class="attempt-section" id="attempt-section">
+      <div style="text-align:center;">
+        <div class="attempt-badge exploring" id="attempt-badge">🎲 EXPLORING</div>
+      </div>
+
+      <div class="attempt-card fail-card" id="attempt-card">
+        <div class="attempt-header">
+          <div>
+            <div class="attempt-label" id="attempt-label">🤖 Attempt #1</div>
+            <div class="attempt-product-name" id="attempt-name">—</div>
+          </div>
+          <div class="attempt-score-badge mid" id="attempt-score-badge">
+            <div class="attempt-score-value mid" id="attempt-score">0%</div>
+            <div class="attempt-score-label">Match</div>
+          </div>
+        </div>
+
+        <div class="attempt-meta" id="attempt-meta"></div>
+        <div class="attempt-features" id="attempt-features"></div>
+
+        <div class="attempt-reasoning">
+          <div class="reasoning-title">💭 Agent's Reasoning</div>
+          <div class="reasoning-text" id="attempt-reasoning">—</div>
+        </div>
+
+        <div class="attempt-reward-row negative" id="attempt-reward-row">
+          <span class="reward-label-text negative" id="reward-label-text">Reward Signal</span>
+          <span class="reward-number negative" id="reward-number">0.00</span>
+        </div>
+      </div>
+
+      <div class="attempt-status learning" id="attempt-status">
+        🔄 Updating weights and trying again...
+      </div>
+    </div>
+
+    <!-- Final Result -->
+    <div class="result-section" id="result-section">
+      <div class="result-card" id="result-card">
+        <div class="result-emoji" id="result-emoji">🎉</div>
+        <div class="result-title" id="result-title">—</div>
+        <div class="result-message" id="result-message">—</div>
+        <div class="result-reward positive" id="result-reward">+1.00</div>
+        <div class="result-ideal" id="result-ideal"></div>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-new-session">🔄 New Session</button>
+          <button class="btn" id="btn-retry-same">🔁 Same Query</button>
+          <button class="btn btn-danger" id="btn-reset-agent">🧹 Reset Agent Brain</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attempt Timeline -->
+    <div class="timeline-section" id="timeline-section">
+      <div class="timeline-title">
+        📋 Episode Attempts <span class="count" id="timeline-count">0</span>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <!-- Cumulative Reward -->
+    <div class="reward-summary" id="reward-summary">
+      <div class="reward-bar-container">
+        <div class="reward-bar-header">
+          <span class="reward-bar-label">Episode Reward</span>
+          <span class="reward-bar-value" id="reward-value">0.00</span>
+        </div>
+        <div class="reward-track">
+          <div class="reward-fill" id="reward-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Overview (collapsible) -->
+    <div class="products-overview" id="products-overview">
+      <button class="products-toggle" id="products-toggle">
+        <span>🏪 All Generated Products (<span id="product-total">0</span>)</span>
+        <span class="arrow">▼</span>
+      </button>
+      <div class="products-grid" id="products-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Personality Panel -->
+<button class="profile-toggle-btn" id="profile-toggle-btn" title="View Personality Profile">🧬</button>
+<div class="personality-float" id="personality-panel">
+  <div class="pf-title">
+    🧬 Your Personality
+    <button class="pf-close" id="pf-close">✕</button>
+  </div>
+  <div id="personality-traits"></div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading"><div class="spinner"></div></div>
+
+<!-- Toast -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// =============================
+// STATE
+// =============================
+const API = '';
+let appState = {
+  query: '',
+  products: [],
+  scoredProducts: [],
+  attempts: [],
+  episodeReward: 0,
+  idealProduct: null,
+  personalityTraits: {},
+  productsExpanded: false,
+  agentStats: null,
+};
+
+// =============================
+// API HELPERS
+// =============================
+async function api(endpoint, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + endpoint, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || err.detail || res.statusText);
+  }
+  return res.json();
+}
+
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('active', show);
+}
+
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// =============================
+// CORE AUTONOMOUS FLOW
+// =============================
+
+async function startSession() {
+  const query = document.getElementById('prompt-input').value.trim();
+  if (!query) { toast('Please enter a product to shop for', 'error'); return; }
+
+  // Reset state
+  appState = {
+    query,
+    products: [],
+    scoredProducts: [],
+    attempts: [],
+    episodeReward: 0,
+    idealProduct: null,
+    personalityTraits: {},
+    productsExpanded: false,
+    agentStats: null,
+  };
+
+  showLoading(true);
+  try {
+    // Step 1: Reset environment — generates products, scores them
+    const data = await api('/reset', 'POST', { query });
+    appState.products = data.products || [];
+    appState.scoredProducts = data.scored_products || [];
+    appState.personalityTraits = data.personality_traits || {};
+    appState.idealProduct = {
+      name: data.ideal_product,
+      score: data.ideal_score,
+    };
+
+    // Show flow area
+    document.getElementById('flow-area').classList.add('active');
+    renderPersonality();
+    toast(`${data.product_count} products generated for "${query}"!`);
+
+    showLoading(false);
+
+    // Step 2: Show thinking, then run autonomous episode
+    hideAllSections();
+    showSection('thinking-section');
+
+    const autoData = await api('/auto-run', 'POST');
+    appState.attempts = autoData.attempts || [];
+    appState.episodeReward = autoData.total_episode_reward || 0;
+    appState.agentStats = autoData.agent_stats || {};
+
+    // Hide thinking
+    hideSection('thinking-section');
+
+    // Step 3: Animate through each attempt one by one
+    await animateAttempts(autoData);
+
+  } catch (e) {
+    toast(e.message, 'error');
+    showLoading(false);
+  }
+}
+
+// Animate through attempts sequentially so the user can watch
+async function animateAttempts(autoData) {
+  const attempts = autoData.attempts || [];
+  if (attempts.length === 0) return;
+
+  showSection('timeline-section');
+  showSection('reward-summary');
+  showSection('products-overview');
+
+  let cumulativeReward = 0;
+
+  for (let i = 0; i < attempts.length; i++) {
+    const a = attempts[i];
+    cumulativeReward += a.reward;
+
+    // Show the current attempt card
+    showSection('attempt-section');
+    renderAttemptCard(a, i === attempts.length - 1);
+
+    // Update timeline with all attempts so far
+    renderTimeline(attempts.slice(0, i + 1));
+    renderRewardBar(cumulativeReward);
+    renderProductsGrid(a.product_id, attempts.slice(0, i + 1));
+    updateHeaderMetrics(autoData.agent_stats, i + 1);
+
+    // Wait for user to absorb the info
+    const delay = a.is_success ? 2000 : 1500;
+    await sleep(delay);
+
+    if (a.is_success) break;
+  }
+
+  // Hide attempt card, show final result
+  hideSection('attempt-section');
+  showFinalResult(autoData);
+}
+
+function renderAttemptCard(attempt, isLast) {
+  const p = attempt.product;
+  const score = attempt.personality_score;
+  const scoreClass = score >= 0.8 ? 'good' : score >= 0.5 ? 'mid' : 'bad';
+
+  // Badge
+  const badge = document.getElementById('attempt-badge');
+  if (attempt.is_success) {
+    badge.textContent = '✅ SUCCESS';
+    badge.className = 'attempt-badge success-badge';
+  } else if (attempt.strategy === 'exploration') {
+    badge.textContent = '🎲 EXPLORING';
+    badge.className = 'attempt-badge exploring';
+  } else {
+    badge.textContent = '🧠 EXPLOITING';
+    badge.className = 'attempt-badge exploiting';
+  }
+
+  // Card class
+  const card = document.getElementById('attempt-card');
+  card.className = `attempt-card ${attempt.is_success ? 'success-card' : attempt.strategy === 'exploration' ? 'learning-card' : 'fail-card'}`;
+  // Re-trigger animation
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = '';
+
+  // Label
+  document.getElementById('attempt-label').textContent = `🤖 Attempt #${attempt.attempt}`;
+  document.getElementById('attempt-name').textContent = p.name;
+
+  // Score
+  const scoreBadge = document.getElementById('attempt-score-badge');
+  scoreBadge.className = `attempt-score-badge ${scoreClass}`;
+  const scoreVal = document.getElementById('attempt-score');
+  scoreVal.textContent = (score * 100).toFixed(0) + '%';
+  scoreVal.className = `attempt-score-value ${scoreClass}`;
+
+  // Meta tags
+  document.getElementById('attempt-meta').innerHTML = `
+    <span class="attempt-tag tag-price">💰 $${p.price.toFixed(2)}</span>
+    <span class="attempt-tag tag-rating">⭐ ${p.rating}</span>
+    <span class="attempt-tag tag-reviews">📊 ${p.reviews.toLocaleString()} reviews</span>
+    <span class="attempt-tag tag-brand">🏷️ ${p.brand}</span>
+    ${p.refundable
+      ? '<span class="attempt-tag tag-refund">✅ Refundable</span>'
+      : '<span class="attempt-tag tag-norefund">⚠️ No Refund</span>'}
+    <span class="attempt-tag tag-seller">🏪 ${p.seller}</span>
+  `;
+
+  // Features
+  document.getElementById('attempt-features').innerHTML = (p.features || []).map(f =>
+    `<span class="feature-chip">${f}</span>`
+  ).join('');
+
+  // Reasoning
+  const reasoningParts = (attempt.reasoning || '').split(' | ');
+  document.getElementById('attempt-reasoning').innerHTML = reasoningParts.map(r => {
+    if (r.startsWith('🎲')) return `<span style="color:var(--amber)">${r}</span>`;
+    if (r.startsWith('🧠')) return `<span style="color:var(--accent-light)">${r}</span>`;
+    if (r.startsWith('✅')) return `<span style="color:var(--green)">${r}</span>`;
+    if (r.startsWith('❌')) return `<span style="color:var(--red)">${r}</span>`;
+    return r;
+  }).join('\n');
+
+  // Reward row
+  const rewardRow = document.getElementById('attempt-reward-row');
+  const rewardLabel = document.getElementById('reward-label-text');
+  const rewardNum = document.getElementById('reward-number');
+  const isPositive = attempt.reward >= 0;
+  rewardRow.className = `attempt-reward-row ${isPositive ? 'positive' : 'negative'}`;
+  rewardLabel.className = `reward-label-text ${isPositive ? 'positive' : 'negative'}`;
+  rewardLabel.textContent = isPositive ? '✅ Positive Reward' : '❌ Negative Reward';
+  rewardNum.className = `reward-number ${isPositive ? 'positive' : 'negative'}`;
+  rewardNum.textContent = (isPositive ? '+' : '') + attempt.reward.toFixed(2);
+
+  // Status
+  const status = document.getElementById('attempt-status');
+  if (attempt.is_success) {
+    status.className = 'attempt-status done';
+    status.textContent = '🎯 Found the ideal product! Agent successfully matched your personality.';
+  } else if (isLast) {
+    status.className = 'attempt-status learning';
+    status.textContent = '📝 Ran out of products to try. Agent saved what it learned for next time.';
+  } else {
+    status.className = 'attempt-status learning';
+    status.textContent = `🔄 Updating weights (ε=${(attempt.epsilon * 100).toFixed(0)}%) and trying again...`;
+  }
+}
+
+function showFinalResult(autoData) {
+  const success = autoData.success;
+  const attempts = autoData.attempts || [];
+  const totalReward = autoData.total_episode_reward;
+  const stats = autoData.agent_stats || {};
+  const ideal = autoData.ideal_product;
+
+  showSection('result-section');
+
+  let emoji, title, message;
+  if (success) {
+    const successAttempt = autoData.success_attempt;
+    if (successAttempt === 1) {
+      emoji = '🎉'; title = 'Perfect! First Try!';
+      message = 'The agent nailed your personality on the very first pick.';
+    } else if (successAttempt === 2) {
+      emoji = '✅'; title = 'Got It on Second Try!';
+      message = 'Quick learner — adjusted weights after one mistake.';
+    } else if (successAttempt <= 4) {
+      emoji = '👍'; title = `Found it on Attempt #${successAttempt}`;
+      message = 'The agent explored, learned, and converged to your ideal pick.';
+    } else {
+      emoji = '💡'; title = `Found it on Attempt #${successAttempt}`;
+      message = 'Took a few tries but the agent figured out your preferences.';
+    }
+  } else {
+    emoji = '📝'; title = 'Episode Complete — Still Learning';
+    message = "The agent didn't find the ideal pick this time, but it updated its weights. It'll do better next episode!";
+  }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-message').textContent = message;
+
+  const rewardEl = document.getElementById('result-reward');
+  rewardEl.textContent = (totalReward >= 0 ? '+' : '') + totalReward.toFixed(2);
+  rewardEl.className = `result-reward ${totalReward >= 0 ? 'positive' : 'negative'}`;
+
+  // Ideal product info
+  if (ideal) {
+    document.getElementById('result-ideal').innerHTML = `
+      🎯 <strong>Ideal Product:</strong> ${ideal.name} (personality match: ${(ideal.score * 100).toFixed(0)}%)
+      <br><span style="font-size:11px; color:var(--text-muted);">
+        Episodes: ${stats.episode_count || 0} · Success Rate: ${((stats.success_rate || 0) * 100).toFixed(0)}% · ε: ${((stats.epsilon || 0) * 100).toFixed(0)}%
+      </span>
+    `;
+  }
+}
+
+// =============================
+// RENDER FUNCTIONS
+// =============================
+
+function renderTimeline(attempts) {
+  const container = document.getElementById('timeline');
+  const countEl = document.getElementById('timeline-count');
+  countEl.textContent = attempts.length;
+
+  container.innerHTML = attempts.map(a => {
+    const numClass = a.is_success ? 'success' : 'fail';
+    const rewardClass = a.reward >= 0 ? 'positive' : 'negative';
+    const rewardSign = a.reward >= 0 ? '+' : '';
+    const stratClass = a.strategy === 'exploration' ? 'explore' : 'exploit';
+    const stratIcon = a.strategy === 'exploration' ? '🎲' : '🧠';
+    return `
+      <div class="timeline-item">
+        <div class="timeline-num ${numClass}">${a.attempt}</div>
+        <div class="timeline-body">
+          <div class="timeline-product">${a.product_name}</div>
+          <div class="timeline-detail">
+            $${a.product.price.toFixed(2)} · ${a.product.rating}★ · ${a.product.brand}
+            · Match: ${(a.personality_score * 100).toFixed(0)}%
+          </div>
+          <div class="timeline-strategy ${stratClass}">${stratIcon} ${a.strategy} (ε=${(a.epsilon * 100).toFixed(0)}%)</div>
+        </div>
+        <div class="timeline-reward ${rewardClass}">
+          ${rewardSign}${a.reward.toFixed(2)}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderProductsGrid(currentPickId, triedAttempts) {
+  const grid = document.getElementById('products-grid');
+  const total = document.getElementById('product-total');
+  total.textContent = appState.products.length;
+
+  const triedIds = new Set((triedAttempts || []).map(a => a.product_id));
+  const idealName = appState.idealProduct?.name;
+
+  // Score map
+  const scoreMap = {};
+  for (const s of appState.scoredProducts) {
+    scoreMap[s.id] = s;
+  }
+
+  grid.innerHTML = appState.products.map(p => {
+    const isCurrent = p.id === currentPickId;
+    const isTried = triedIds.has(p.id) && !isCurrent;
+    const isIdeal = p.name === idealName;
+    const scoreInfo = scoreMap[p.id];
+
+    const classes = ['mini-product'];
+    if (isCurrent) classes.push('highlighted');
+    if (isTried) classes.push('tried');
+    if (isIdeal && !isCurrent) classes.push('ideal');
+
+    let tag = '';
+    if (isCurrent) tag = '<div class="mp-tag" style="color:var(--green)">👉 Current Pick</div>';
+    else if (isIdeal) tag = '<div class="mp-tag" style="color:var(--accent-light)">🎯 Ideal</div>';
+    else if (isTried) tag = '<div class="mp-tag" style="color:var(--red)">❌ Tried</div>';
+
+    return `
+      <div class="${classes.join(' ')}">
+        <div class="mp-name">${p.name}</div>
+        <div class="mp-meta">
+          <span>$${p.price.toFixed(2)}</span>
+          <span>${p.rating}★</span>
+          <span>${p.reviews} reviews</span>
+        </div>
+        ${scoreInfo ? `<div class="mp-score">Match: ${(scoreInfo.score * 100).toFixed(0)}% (#${scoreInfo.rank})</div>` : ''}
+        ${tag}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderRewardBar(cumulativeReward) {
+  document.getElementById('reward-value').textContent = cumulativeReward.toFixed(2);
+  const pct = Math.max(0, Math.min(100, ((cumulativeReward + 1) / 2) * 100));
+  document.getElementById('reward-fill').style.width = pct + '%';
+}
+
+function renderPersonality() {
+  const container = document.getElementById('personality-traits');
+  const traits = appState.personalityTraits;
+  const keys = Object.keys(traits);
+
+  if (keys.length === 0) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;">Start a session to load profile</div>';
+    return;
+  }
+
+  const colors = {
+    price_sensitivity: '#6366f1',
+    quality_preference: '#22c55e',
+    risk_aversion: '#ef4444',
+    research_depth: '#8b5cf6',
+    brand_trust: '#f59e0b',
+    exploration_vs_repeat: '#ec4899',
+    review_dependence: '#3b82f6',
+    return_preference: '#14b8a6',
+    decision_speed: '#f97316',
+    discount_sensitivity: '#a855f7',
+  };
+
+  container.innerHTML = keys.map(k => {
+    const v = traits[k];
+    const pct = Math.round(v * 100);
+    const color = colors[k] || '#6366f1';
+    const label = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return `
+      <div class="trait-row">
+        <span class="trait-label">${label}</span>
+        <div class="trait-bar">
+          <div class="trait-fill" style="width:${pct}%;background:${color};"></div>
+        </div>
+        <span class="trait-val" style="color:${color};">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateHeaderMetrics(stats, attemptCount) {
+  document.getElementById('m-episodes').textContent = stats?.episode_count || 0;
+  document.getElementById('m-success').textContent = ((stats?.success_rate || 0) * 100).toFixed(0) + '%';
+  document.getElementById('m-reward').textContent = (stats?.total_reward || 0).toFixed(2);
+}
+
+// Section visibility helpers
+function showSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+function hideSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('active');
+}
+function hideAllSections() {
+  ['thinking-section', 'attempt-section', 'result-section',
+   'timeline-section', 'reward-summary', 'products-overview'].forEach(hideSection);
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// =============================
+// EVENT LISTENERS
+// =============================
+
+// Start button
+document.getElementById('btn-start').addEventListener('click', startSession);
+document.getElementById('prompt-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startSession();
+});
+
+// New session / retry / reset
+document.getElementById('btn-new-session').addEventListener('click', () => {
+  hideAllSections();
+  document.getElementById('flow-area').classList.remove('active');
+  document.getElementById('prompt-input').value = '';
+  document.getElementById('prompt-input').focus();
+});
+document.getElementById('btn-retry-same').addEventListener('click', () => {
+  document.getElementById('prompt-input').value = appState.query;
+  startSession();
+});
+document.getElementById('btn-reset-agent').addEventListener('click', async () => {
+  if (!confirm('Reset the agent\'s brain? All learned weights will be lost.')) return;
+  try {
+    await api('/agent-reset', 'POST');
+    toast('Agent brain reset! Starting from scratch.', 'info');
+    updateHeaderMetrics({ episode_count: 0, success_rate: 0, total_reward: 0 }, 0);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+// Category pills
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    document.getElementById('prompt-input').value = pill.dataset.cat;
+  });
+});
+
+// Products toggle
+document.getElementById('products-toggle').addEventListener('click', () => {
+  const toggle = document.getElementById('products-toggle');
+  const grid = document.getElementById('products-grid');
+  appState.productsExpanded = !appState.productsExpanded;
+  toggle.classList.toggle('open', appState.productsExpanded);
+  grid.classList.toggle('open', appState.productsExpanded);
+});
+
+// Personality panel toggle
+document.getElementById('profile-toggle-btn').addEventListener('click', () => {
+  document.getElementById('personality-panel').classList.toggle('active');
+});
+document.getElementById('pf-close').addEventListener('click', () => {
+  document.getElementById('personality-panel').classList.remove('active');
+});
+
+// Load initial stats
+(async () => {
+  try {
+    const stats = await api('/agent-stats');
+    updateHeaderMetrics(stats, 0);
+  } catch (e) { /* ok */ }
+})();
+
+</script>
+</body>
+</html>

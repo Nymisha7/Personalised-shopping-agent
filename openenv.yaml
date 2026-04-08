@@ -1,0 +1,151 @@
+name: "shopping_agent"
+version: "1.0.0"
+description: >
+  A personality-driven reinforcement learning environment for personalized
+  shopping agents. The agent must learn a specific user's shopping style
+  from persistent memory (personality traits, past purchases, semantic
+  conclusions) and make purchase decisions aligned with the user's personality.
+
+  Dynamic product generation: accepts free-form queries (e.g., "lip balm",
+  "earbuds", "backpack") and generates personality-testing product sets
+  with decoy/trap products at higher difficulties.
+
+  Personality-based grading: scores purchases against 8 personality
+  dimensions (price sensitivity, quality preference, risk aversion,
+  review dependence, brand trust, return preference, discount sensitivity,
+  exploration vs repeat). Score is always in [0.0, 1.0].
+
+docker_image: "shopping-agent-env:latest"
+language: "python"
+entrypoint: "python inference.py"
+
+tasks:
+  - name: "quick_pick"
+    description: >
+      Easy task: Buy a lip balm. Only 4 products, minimal traps.
+      Agent can succeed with basic personality reasoning.
+      Good score requires picking a personality-aligned product.
+    difficulty: "easy"
+    grader: "personality_grader.grade_purchase"
+    max_steps: 8
+    expected_score_range: [0.4, 1.0]
+    query: "lip balm"
+    product_count: 4
+
+  - name: "smart_shop"
+    description: >
+      Medium task: Buy earbuds. 8 products including budget traps and
+      premium decoys. Agent must research (view, compare) before buying.
+      Personality alignment AND research quality both matter.
+    difficulty: "medium"
+    grader: "personality_grader.grade_purchase"
+    max_steps: 12
+    expected_score_range: [0.3, 1.0]
+    query: "earbuds"
+    product_count: 8
+
+  - name: "expert_deal"
+    description: >
+      Hard task: Buy a laptop backpack. 12 products with multiple
+      decoys, suspicious sellers, non-refundable items, and close
+      personality-score competitors. Agent must deeply research,
+      avoid traps, and pick the subtle best-fit. Challenges frontier
+      models with nuanced personality reasoning.
+    difficulty: "hard"
+    grader: "personality_grader.grade_purchase"
+    max_steps: 15
+    expected_score_range: [0.2, 1.0]
+    query: "laptop backpack"
+    product_count: 12
+
+observation_space:
+  type: "ShoppingObservation"
+  fields:
+    - name: query
+      type: string
+      description: "Current search query"
+    - name: category
+      type: string
+      description: "Product category"
+    - name: candidate_products
+      type: "list[dict]"
+      description: "Products visible to the agent with id, name, price, rating, brand, reviews, seller, refundable, features"
+    - name: memory_profile
+      type: dict
+      description: "User personality traits and semantic conclusions from memory/"
+    - name: cart
+      type: "list[string]"
+      description: "Product IDs in cart"
+    - name: shortlisted
+      type: "list[string]"
+      description: "Product IDs shortlisted"
+    - name: viewed_items
+      type: "list[string]"
+      description: "Product IDs viewed in detail"
+    - name: compared_sets
+      type: "list[list[string]]"
+      description: "Sets of product IDs compared"
+    - name: history_summary
+      type: string
+      description: "Recent action history"
+    - name: feedback
+      type: string
+      description: "Environment feedback on last action"
+    - name: step_number
+      type: int
+      description: "Current step"
+    - name: max_steps
+      type: int
+      description: "Max steps in episode"
+
+action_space:
+  type: "ShoppingAction"
+  actions:
+    - name: search
+      description: "Search catalog (requires search_query)"
+    - name: view_item
+      description: "View product details (requires item_ids)"
+    - name: compare
+      description: "Compare 2+ products side-by-side (requires item_ids)"
+    - name: shortlist
+      description: "Mark products for later (requires item_ids)"
+    - name: add_to_cart
+      description: "Add products to cart (requires item_ids)"
+    - name: remove_from_cart
+      description: "Remove products from cart (requires item_ids)"
+    - name: buy
+      description: "Purchase items in cart + item_ids"
+    - name: skip
+      description: "Skip turn / skip products (optional item_ids)"
+    - name: ask_more
+      description: "Request more product options"
+
+reward_function:
+  description: >
+    Multi-signal reward providing feedback over the full trajectory:
+    - Research actions: +0.05 per view/compare (scaled by user's research_depth)
+    - Shortlisting: +0.10 (scaled by research_depth)
+    - Adding to cart: +0.10
+    - Buy action: 0.0–0.85 based on personality alignment score
+    - Invalid actions: -0.10
+    - Running out of steps: -0.20 penalty
+    - All rewards clamped so total score is in [0.0, 1.0]
+
+memory_files:
+  - memory/personality.md
+  - memory/preferences.json
+  - memory/semantic_memory.jsonl
+  - memory/episodic_log.jsonl
+  - memory/projects.md
+
+personality_dimensions:
+  - price_sensitivity
+  - quality_preference
+  - risk_aversion
+  - research_depth
+  - brand_trust
+  - exploration_vs_repeat
+  - review_dependence
+  - return_preference
+  - decision_speed
+  - discount_sensitivity

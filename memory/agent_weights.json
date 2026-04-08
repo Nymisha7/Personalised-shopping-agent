@@ -1,0 +1,17 @@
+{
+  "weights": {
+    "price_norm": -0.3196319895,
+    "rating_norm": -0.28806975,
+    "reviews_norm": -0.14144364449999997,
+    "brand_premium": -0.25470899999999996,
+    "refundable": -0.31617000000000006,
+    "seller_trusted": -0.31617000000000006,
+    "review_volume": -0.2534295194999999,
+    "value_ratio": -0.38936335050000004
+  },
+  "epsilon": 0.05,
+  "episode_count": 3,
+  "total_reward": -3.2373,
+  "success_count": 3,
+  "last_updated": "2026-04-08T21:05:53.784351"
+}
