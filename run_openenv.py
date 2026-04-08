@@ -40,8 +40,15 @@ from memory_engine import load_profile
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = (
+    os.getenv("OPENAI_API_KEY")
+    or os.getenv("HF_TOKEN")
+    or os.getenv("API_KEY")
+)
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://api.openai.com/v1" if os.getenv("OPENAI_API_KEY") else "https://router.huggingface.co/v1",
+)
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 BENCHMARK = "shopping_agent"
@@ -162,13 +169,15 @@ Reply with the next action as JSON.""")
 
 
 def get_agent_action(
-    client: OpenAI,
+    client: Optional[OpenAI],
     system_prompt: str,
     step: int,
     obs_dict: dict,
     last_reward: float,
     history: List[str],
 ) -> ShoppingAction:
+    if client is None:
+        return _fallback_action(obs_dict)
     user_prompt = build_user_prompt(step, obs_dict, last_reward, history)
     try:
         completion = client.chat.completions.create(
@@ -328,7 +337,7 @@ def main() -> None:
     print("=" * 60, flush=True)
     print(flush=True)
 
-    llm_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    llm_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY) if API_KEY else None
 
     all_scores = {}
     for task in TASKS:

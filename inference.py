@@ -5,7 +5,7 @@ MANDATORY
 - Before submitting, ensure the following variables are defined:
     API_BASE_URL   The API endpoint for the LLM.
     MODEL_NAME     The model identifier to use for inference.
-    HF_TOKEN       Your Hugging Face / API key.
+    OPENAI_API_KEY Your OpenAI API key.
 
 STDOUT FORMAT
 - [START] task=<task_name> env=<benchmark> model=<model_name>
@@ -18,6 +18,7 @@ Runs 3 tasks (easy → medium → hard) and produces baseline scores.
 import asyncio
 import json
 import os
+import random
 import textwrap
 from typing import List, Optional
 
@@ -33,9 +34,17 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 # Configuration (reads from env vars, with defaults)
 # ---------------------------------------------------------------------------
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY = (
+    os.getenv("OPENAI_API_KEY")
+    or os.getenv("HF_TOKEN")
+    or os.getenv("API_KEY")
+)
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://api.openai.com/v1" if os.getenv("OPENAI_API_KEY") else "https://router.huggingface.co/v1",
+)
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+RANDOM_SEED = int(os.getenv("BASELINE_RANDOM_SEED", "42"))
 
 BENCHMARK = "shopping_agent"
 TEMPERATURE = 0.7
@@ -170,13 +179,15 @@ Reply with the next action as JSON.""")
 
 
 def get_agent_action(
-    client: OpenAI,
+    client: Optional[OpenAI],
     system_prompt: str,
     step: int,
     obs_dict: dict,
     last_reward: float,
     history: List[str],
 ) -> ShoppingAction:
+    if client is None:
+        return _fallback_action(obs_dict)
     user_prompt = build_user_prompt(step, obs_dict, last_reward, history)
     try:
         completion = client.chat.completions.create(
@@ -355,7 +366,8 @@ async def run_episode(
 # Main: run all 3 tasks
 # ---------------------------------------------------------------------------
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    random.seed(RANDOM_SEED)
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY) if API_KEY else None
 
     all_scores = {}
     for task in TASKS:

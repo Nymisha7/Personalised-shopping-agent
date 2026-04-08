@@ -168,12 +168,21 @@ uvicorn server.app:app --host 0.0.0.0 --port 7860
 
 ```bash
 # Set environment variables
-export HF_TOKEN="your-hf-token"
-export API_BASE_URL="https://router.huggingface.co/v1"
-export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
+export OPENAI_API_KEY="your-openai-key"
+export MODEL_NAME="gpt-4.1-mini"
+export BASELINE_RANDOM_SEED="42"
 
 # Run all 3 tasks
 python inference.py
+```
+
+Optional compatibility mode:
+
+```bash
+# If you are using a non-OpenAI compatible provider, you can still override:
+export API_BASE_URL="https://router.huggingface.co/v1"
+export HF_TOKEN="your-hf-token"
+export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
 ```
 
 ### Docker
@@ -209,6 +218,12 @@ Space settings:
 - App port: `7860`
 - Tag: `openenv`
 
+Deployment checklist:
+- Create the Space with SDK set to `Docker`
+- Push this repository as-is
+- Confirm the README frontmatter remains at the top of the repo README
+- Verify `/health` after the Space finishes building
+
 After deployment, verify:
 
 ```bash
@@ -224,7 +239,6 @@ curl https://<username>-shopping-agent-openenv.hf.space/health
 | `/step` | POST | Execute action |
 | `/state` | GET | Get current episode state |
 | `/` | GET | Interactive web UI |
-| `/auto-run` | POST | Run autonomous RL episode |
 | `/profile` | GET | View user personality profile |
 
 ### Reset with a task:
