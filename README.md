@@ -1,3 +1,7 @@
+This is our submission to the OPENENV hackathon
+
+Link:https://huggingface.co/spaces/Nymisha7/RL-Personality-automatic-shopper
+
 ---
 title: Shopping Agent OpenEnv
 emoji: 🛍️
